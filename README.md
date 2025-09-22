@@ -1,8 +1,32 @@
-# Welcome to your Expo app 👋
+# Damium
+O Damium é um jogo de damas para dispositivos móveis que busca modernizar a experiência do clássico jogo de tabuleiro. Nosso objetivo é oferecer uma plataforma intuitiva e personalizável, combinando a tradição das damas com recursos modernos de jogos online.
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+# Público-alvo
+Jogadores casuais de todas as idades, entusiastas de jogos de estratégia, e aqueles que buscam uma experiência competitiva em dispositivos móveis. O app é ideal para quem quer jogar damas de forma rápida ou se aprofundar em partidas estratégicas com um sistema de ranking.
 
-## Get started
+# Principais Funcionalidades
+Modos de Jogo Variados: Jogue contra a IA em diferentes níveis de dificuldade, desafie amigos ou (teste suas habilidades online contra jogadores de todo o mundo).
+
+Personalização: Altere a aparência do tabuleiro e das peças com diversas opções de temas e cores.
+
+Sistema de Ranking: Compita em um ranking online para subir de nível e provar que é o melhor jogador de damas.
+
+Histórico de Partidas: Analise suas jogadas e estratégias passadas para melhorar seu desempenho.
+
+# Membros do Grupo:
+
+Elias Daniel Dias
+
+Gianlucca Francisco Celani Machado
+
+Gustavo Aleixo da Silva
+
+João Paulo Lucio Aparecido
+
+Líder: [Gianlucca]
+
+## Como começar:
+
 
 1. Install dependencies
 
@@ -15,39 +39,3 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    ```bash
    npx expo start
    ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
-```
-
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
-
-
-- Elias Daniel Dias, Gianlucca, Gustavo Aleixo da Silva
