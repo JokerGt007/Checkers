@@ -1,4 +1,6 @@
 # Damium
+<img width="124" height="124" alt="image" src="https://github.com/user-attachments/assets/9ae25450-88d5-4553-9a64-c0068aca5a56" />
+
 O Damium é um jogo de damas para dispositivos móveis que busca modernizar a experiência do clássico jogo de tabuleiro. Nosso objetivo é oferecer uma plataforma intuitiva e personalizável, combinando a tradição das damas com recursos modernos de jogos online.
 
 # Público-alvo
@@ -37,3 +39,27 @@ Histórico de Partidas: Analise suas jogadas e estratégias passadas para melhor
    ```bash
    npx expo start
    ```
+
+## Oque sera usado:
+
+### Backend:
+
+PHP 9.2+
+
+Laravel 10
+
+PostgreSQL
+
+Composer
+
+Artisan CLI
+
+Firebase
+
+### Frontend:
+
+React
+
+html
+
+css
