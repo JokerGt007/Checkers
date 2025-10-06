@@ -15,15 +15,13 @@ Histórico de Partidas: Analise suas jogadas e estratégias passadas para melhor
 
 # Membros do Grupo:
 
-Elias Daniel Dias
+| Integrante                             | Função/Responsabilidade    | Observações        |
+| -------------------------------------- | -------------------------- | ------------------ |
+| **Elias Daniel Dias**                  | Estilização do menu        |                    |
+| **Gustavo Aleixo da Silva**            | Estrutura e lógica do menu |                    |
+| **Gianlucca Francisco Celani Machado** | Integração com Firebase    | **Líder do grupo** |
+| **João Paulo Lucio Aparecido**         | Conexão com MySQL          |                    |
 
-Gianlucca Francisco Celani Machado
-
-Gustavo Aleixo da Silva
-
-João Paulo Lucio Aparecido
-
-Líder: [Gianlucca]
 
 ## Como começar:
 
