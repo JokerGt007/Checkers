@@ -1,6 +1,6 @@
-import React from 'react';
+import { useRouter } from "expo-router";
+import React from "react";
 
-// CSS em estilo de objeto JS
 const styles = {
   body: {
     margin: 0,
@@ -40,42 +40,58 @@ const styles = {
     textDecoration: 'none',
     lineHeight: 1,
   },
+  btnLogin: {
+    display: 'block',
+    width: '200px',
+    padding: '15px',
+    margin: '25px auto 0 auto',
+    fontSize: '18px',
+    fontWeight: 'bold',
+    background: '#4CAF50',
+    color: 'white',
+    border: '3px solid #4CAF50',
+    cursor: 'pointer',
+    transition: 'all 0.3s',
+    textDecoration: 'none',
+    lineHeight: 1,
+  },
+  divider: {
+    height: '1px',
+    background: '#ddd',
+    margin: '20px 0',
+  },
 };
 
 const menuItems = [
-  { label: 'JOGAR', href: 'jogar.html' },
-  { label: 'SKINS', href: 'skins.html' },
-  { label: 'RANKING', href: 'ranking.html' },
-  { label: 'CONFIGURAÇÕES', href: 'configuracoes.html' },
-  { label: 'CRÉDITOS', href: 'creditos.html' },
+  { label: 'JOGAR', href: '/jogar' },
+  { label: 'SKINS', href: '/skins' },
+  { label: 'RANKING', href: '/ranking' },
+  { label: 'CONFIGURAÇÕES', href: '/configuracoes' },
+  { label: 'CRÉDITOS', href: '/creditos' },
 ];
 
 export default function DamiumMenu() {
+  const router = useRouter();
+
   return (
     <div style={styles.body}>
       <div style={styles.menuContainer}>
         <h1 style={styles.h1}>DAMIUN</h1>
         {menuItems.map(item => (
-          <a
+          <button
             key={item.label}
-            href={item.href}
             style={styles.btn}
-            onMouseOver={e => {
-              e.target.style.background = 'white';
-              e.target.style.color = '#000';
-              e.target.style.transform = 'translateY(-2px)';
-              e.target.style.boxShadow = '0 5px 15px rgba(0,0,0,0.2)';
-            }}
-            onMouseOut={e => {
-              e.target.style.background = '#000';
-              e.target.style.color = 'white';
-              e.target.style.transform = 'none';
-              e.target.style.boxShadow = 'none';
-            }}
+            onClick={() => router.push(item.href)}
           >
             {item.label}
-          </a>
+          </button>
         ))}
+
+        <div style={styles.divider}></div>
+
+        <button style={styles.btnLogin} onClick={() => router.push('/login')}>
+           LOGIN
+         </button> 
       </div>
     </div>
   );
