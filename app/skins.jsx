@@ -151,6 +151,8 @@ const styles = {
 };
 
 const skins = [
+  { id: 1, name: 'CORINGA', image: '/assets/parts/SKINS/coringa.png', unlocked: true },
+  { id: 2, name: 'GUNDAM', image: '/assets/parts/SKINS/gundam.png', unlocked: true },
   { id: 3, name: 'EM BREVE', icon: '❓', unlocked: false },
   { id: 4, name: 'EM BREVE', icon: '❓', unlocked: false },
   { id: 5, name: 'EM BREVE', icon: '❓', unlocked: false },
