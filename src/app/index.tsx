@@ -1,7 +1,6 @@
 import React from "react";
 import { StyleSheet, View } from "react-native";
-import DamiumMenu from '../DamiumMenu.jsx';
-
+import DamiumMenu from './components/DamiumMenu';
 
 export default function Index() {
   return (
@@ -11,15 +10,11 @@ export default function Index() {
   );
 }
 
-export const options = {
-  headerShown: false,
-};
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#f2f2f2",
+    backgroundColor: "#0a0a0a",
   },
 });

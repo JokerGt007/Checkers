@@ -94,7 +94,7 @@ export default function DamiumMenu() {
   return (
     <div style={styles.body}>
       <div style={styles.menuContainer}>
-        <h1 style={styles.h1}>DAMIUN</h1>
+        <h1 style={styles.h1}>DAMIUM</h1>
         {menuItems.map((item, index) => (
           <button
             key={item.label}
