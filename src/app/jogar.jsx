@@ -95,22 +95,105 @@ export default function JogarScreen() {
     return false;
   };
 
+  // NOVA FUNÇÃO: Verificar capturas múltiplas obrigatórias
+const getMandatoryCaptures = (row, col) => {
+  const captures = [];
+  const piece = board[row][col];
+  
+  // Direções possíveis baseadas no tipo da peça
+  let directions = [];
+  
+  if (piece === PIECE_TYPES.PLAYER1) {
+    directions = [[1, -1], [1, 1]];
+  } else if (piece === PIECE_TYPES.PLAYER2) {
+    directions = [[-1, -1], [-1, 1]];
+  } else if (piece === PIECE_TYPES.PLAYER1_KING || piece === PIECE_TYPES.PLAYER2_KING) {
+    directions = [[-1, -1], [-1, 1], [1, -1], [1, 1]];
+  }
+  
+  for (const [dRow, dCol] of directions) {
+    if (piece === PIECE_TYPES.PLAYER1_KING || piece === PIECE_TYPES.PLAYER2_KING) {
+      // Lógica para damas
+      for (let step = 2; step < 8; step++) {
+        const toRow = row + dRow * step;
+        const toCol = col + dCol * step;
+        
+        if (toRow >= 0 && toRow < 8 && toCol >= 0 && toCol < 8 && 
+            board[toRow][toCol] === PIECE_TYPES.EMPTY &&
+            canQueenCapture(row, col, toRow, toCol)) {
+          captures.push([toRow, toCol]);
+        }
+      }
+    } else {
+      // Lógica para peças normais
+      const toRow = row + dRow * 2;
+      const toCol = col + dCol * 2;
+      
+      if (toRow >= 0 && toRow < 8 && toCol >= 0 && toCol < 8 && 
+          board[toRow][toCol] === PIECE_TYPES.EMPTY &&
+          canCapture(row, col, toRow, toCol)) {
+        captures.push([toRow, toCol]);
+      }
+    }
+  }
+  
+  return captures;
+};
+
+// NOVA FUNÇÃO: Verificar se há capturas obrigatórias para o jogador atual
+const hasObligatoryCaptures = (player) => {
+  for (let row = 0; row < 8; row++) {
+    for (let col = 0; col < 8; col++) {
+      const piece = board[row][col];
+      
+      // Verificar se é peça do jogador atual
+      const isPlayerPiece = (
+        (player === 1 && (piece === PIECE_TYPES.PLAYER1 || piece === PIECE_TYPES.PLAYER1_KING)) ||
+        (player === 2 && (piece === PIECE_TYPES.PLAYER2 || piece === PIECE_TYPES.PLAYER2_KING))
+      );
+      
+      if (isPlayerPiece) {
+        const captures = getMandatoryCaptures(row, col);
+        if (captures.length > 0) {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+};
+
   // Calcular movimentos possíveis - MELHORADO PARA DAMAS
   const calculatePossibleMoves = (row, col) => {
-    const moves = [];
     const piece = board[row][col];
+    
+    // Primeiro verificar se há capturas obrigatórias
+    const captures = getMandatoryCaptures(row, col);
+    
+    // Se há capturas disponíveis para esta peça, só permitir capturas
+    if (captures.length > 0) {
+      console.log(`🔥 Capturas obrigatórias encontradas para [${row}, ${col}]:`, captures);
+      return captures;
+    }
+    
+    // Se há capturas obrigatórias para qualquer peça do jogador atual, esta peça não pode se mover
+    const playerPieceType = piece === PIECE_TYPES.PLAYER1 || piece === PIECE_TYPES.PLAYER1_KING ? 1 : 2;
+    if (hasObligatoryCaptures(playerPieceType)) {
+      console.log(`⚠️ Outras peças têm capturas obrigatórias. Peça [${row}, ${col}] não pode se mover.`);
+      return [];
+    }
+    
+    // Caso contrário, calcular movimentos normais
+    const moves = [];
     
     // Direções possíveis baseadas no tipo da peça
     let directions = [];
     
     if (piece === PIECE_TYPES.PLAYER1) {
-      // Jogador 1 só move para baixo
       directions = [[1, -1], [1, 1]];
     } else if (piece === PIECE_TYPES.PLAYER2) {
-      // Jogador 2 só move para cima
       directions = [[-1, -1], [-1, 1]];
     } else if (piece === PIECE_TYPES.PLAYER1_KING || piece === PIECE_TYPES.PLAYER2_KING) {
-      // Damas movem em todas as direções
       directions = [[-1, -1], [-1, 1], [1, -1], [1, 1]];
     }
     
@@ -127,16 +210,6 @@ export default function JogarScreen() {
         if (newRow >= 0 && newRow < 8 && newCol >= 0 && newCol < 8 && 
             board[newRow][newCol] === PIECE_TYPES.EMPTY) {
           moves.push([newRow, newCol]);
-        }
-        
-        // Captura (2 casas)
-        const captureRow = row + dRow * 2;
-        const captureCol = col + dCol * 2;
-        
-        if (captureRow >= 0 && captureRow < 8 && captureCol >= 0 && captureCol < 8 && 
-            board[captureRow][captureCol] === PIECE_TYPES.EMPTY &&
-            canCapture(row, col, captureRow, captureCol)) {
-          moves.push([captureRow, captureCol]);
         }
       }
     }
@@ -284,6 +357,7 @@ export default function JogarScreen() {
     // Verificar captura
     const rowDiff = toRow - fromRow;
     const colDiff = toCol - fromCol;
+    let captureOccurred = false;
     
     if (piece === PIECE_TYPES.PLAYER1_KING || piece === PIECE_TYPES.PLAYER2_KING) {
       // CAPTURA DE DAMA - remover todas as peças inimigas no caminho
@@ -306,6 +380,7 @@ export default function JogarScreen() {
           
           if (isEnemyPiece) {
             newBoard[checkRow][checkCol] = PIECE_TYPES.EMPTY;
+            captureOccurred = true;
             console.log(`👑💥 Dama capturou peça em [${checkRow}, ${checkCol}]`);
           }
         }
@@ -315,25 +390,136 @@ export default function JogarScreen() {
       const middleRow = fromRow + rowDiff / 2;
       const middleCol = fromCol + colDiff / 2;
       newBoard[middleRow][middleCol] = PIECE_TYPES.EMPTY;
+      captureOccurred = true;
       console.log(`💥 Captura! Peça removida em [${middleRow}, ${middleCol}]`);
     }
     
     // Promover para dama
+    let promoted = false;
     if (piece === PIECE_TYPES.PLAYER1 && toRow === 7) {
-      // Jogador 1 chegou na última linha (linha 7)
       newBoard[toRow][toCol] = PIECE_TYPES.PLAYER1_KING;
+      promoted = true;
       console.log("👑 Jogador 1 promovido a dama!");
     } else if (piece === PIECE_TYPES.PLAYER2 && toRow === 0) {
-      // Jogador 2 chegou na primeira linha (linha 0)
       newBoard[toRow][toCol] = PIECE_TYPES.PLAYER2_KING;
+      promoted = true;
       console.log("👑 Jogador 2 promovido a dama!");
     }
     
+    // Atualizar o tabuleiro
     setBoard(newBoard);
+    
+    // VERIFICAR CAPTURAS ADICIONAIS
+    if (captureOccurred && !promoted) {
+      // Temporariamente atualizar o board para verificar capturas adicionais
+      const tempBoard = board;
+      
+      // Simular o novo estado
+      const additionalCaptures = [];
+      const currentPiece = newBoard[toRow][toCol];
+      
+      // Direções possíveis baseadas no tipo da peça
+      let directions = [];
+      
+      if (currentPiece === PIECE_TYPES.PLAYER1) {
+        directions = [[1, -1], [1, 1]];
+      } else if (currentPiece === PIECE_TYPES.PLAYER2) {
+        directions = [[-1, -1], [-1, 1]];
+      } else if (currentPiece === PIECE_TYPES.PLAYER1_KING || currentPiece === PIECE_TYPES.PLAYER2_KING) {
+        directions = [[-1, -1], [-1, 1], [1, -1], [1, 1]];
+      }
+      
+      // Verificar capturas adicionais com o novo tabuleiro
+      for (const [dRow, dCol] of directions) {
+        if (currentPiece === PIECE_TYPES.PLAYER1_KING || currentPiece === PIECE_TYPES.PLAYER2_KING) {
+          // Lógica para damas
+          for (let step = 2; step < 8; step++) {
+            const nextRow = toRow + dRow * step;
+            const nextCol = toCol + dCol * step;
+            
+            if (nextRow >= 0 && nextRow < 8 && nextCol >= 0 && nextCol < 8 && 
+                newBoard[nextRow][nextCol] === PIECE_TYPES.EMPTY) {
+              
+              // Verificar se há inimigo no caminho
+              let hasEnemyInPath = false;
+              let enemyCount = 0;
+              
+              for (let checkStep = 1; checkStep < step; checkStep++) {
+                const checkRow = toRow + dRow * checkStep;
+                const checkCol = toCol + dCol * checkStep;
+                const checkPiece = newBoard[checkRow][checkCol];
+                
+                if (checkPiece !== PIECE_TYPES.EMPTY) {
+                  const isEnemyPiece = (
+                    (currentPiece === PIECE_TYPES.PLAYER1_KING && 
+                     (checkPiece === PIECE_TYPES.PLAYER2 || checkPiece === PIECE_TYPES.PLAYER2_KING)) ||
+                    (currentPiece === PIECE_TYPES.PLAYER2_KING && 
+                     (checkPiece === PIECE_TYPES.PLAYER1 || checkPiece === PIECE_TYPES.PLAYER1_KING))
+                  );
+                  
+                  if (isEnemyPiece) {
+                    enemyCount++;
+                  } else {
+                    break; // Peça aliada bloqueia
+                  }
+                }
+              }
+              
+              if (enemyCount === 1) {
+                additionalCaptures.push([nextRow, nextCol]);
+              }
+            }
+          }
+        } else {
+          // Lógica para peças normais
+          const nextRow = toRow + dRow * 2;
+          const nextCol = toCol + dCol * 2;
+          
+          if (nextRow >= 0 && nextRow < 8 && nextCol >= 0 && nextCol < 8 && 
+              newBoard[nextRow][nextCol] === PIECE_TYPES.EMPTY) {
+            
+            const middleRow = toRow + dRow;
+            const middleCol = toCol + dCol;
+            const middlePiece = newBoard[middleRow][middleCol];
+            
+            if (middlePiece !== PIECE_TYPES.EMPTY) {
+              const isEnemyPiece = (
+                (currentPiece === PIECE_TYPES.PLAYER1 && 
+                 (middlePiece === PIECE_TYPES.PLAYER2 || middlePiece === PIECE_TYPES.PLAYER2_KING)) ||
+                (currentPiece === PIECE_TYPES.PLAYER2 && 
+                 (middlePiece === PIECE_TYPES.PLAYER1 || middlePiece === PIECE_TYPES.PLAYER1_KING))
+              );
+              
+              if (isEnemyPiece) {
+                additionalCaptures.push([nextRow, nextCol]);
+              }
+            }
+          }
+        }
+      }
+      
+      if (additionalCaptures.length > 0) {
+        // HÁ CAPTURAS ADICIONAIS - continuar com a mesma peça
+        console.log(`🔥 Capturas adicionais disponíveis:`, additionalCaptures);
+        setSelectedPiece([toRow, toCol]);
+        setPossibleMoves(additionalCaptures);
+        
+        // // NÃO trocar de jogador ainda
+        // Alert.alert(
+        //   "🔥 Captura Múltipla!", 
+        //   "Você deve continuar capturando com a mesma peça!",
+        //   [{ text: "Continuar", style: "default" }]
+        // );
+        
+        return; // Sair sem trocar jogador
+      }
+    }
+    
+    // Limpar seleção
     setSelectedPiece(null);
     setPossibleMoves([]);
     
-    // Trocar jogador
+    // Trocar jogador (só acontece se não há capturas adicionais)
     const nextPlayer = currentPlayer === 1 ? 2 : 1;
     setCurrentPlayer(nextPlayer);
     
