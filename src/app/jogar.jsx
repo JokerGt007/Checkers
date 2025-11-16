@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import {
   Alert,
   Dimensions,
+  Image,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -35,6 +36,7 @@ export default function JogarScreen() {
   const [possibleMoves, setPossibleMoves] = useState([]);
   const [gameOver, setGameOver] = useState(false);
   const [winner, setWinner] = useState(null);
+  const [skinImageUrl, setSkinImageUrl] = useState(null); // Nova state para a skin
 
   // Inicializar tabuleiro - MOVIDO PARA CIMA
   const initializeBoard = () => {
@@ -226,28 +228,85 @@ export default function JogarScreen() {
     }
   };
 
-  // Renderizar peça
+  // Renderizar peça com skin - NOVA FUNÇÃO
   const renderPiece = (piece) => {
-    switch (piece) {
-      case PIECE_TYPES.PLAYER1:
-        return <View style={styles.player1Piece} />;
-      case PIECE_TYPES.PLAYER1_KING:
-        return (
-          <View style={styles.player1Piece}>
-            <Text style={styles.kingText}>♔</Text>
-          </View>
-        );
-      case PIECE_TYPES.PLAYER2:
-        return <View style={styles.player2Piece} />;
-      case PIECE_TYPES.PLAYER2_KING:
-        return (
-          <View style={styles.player2Piece}>
-            <Text style={styles.kingText}>♔</Text>
-          </View>
-        );
-      default:
-        return null;
+    if (piece === PIECE_TYPES.EMPTY) return null;
+
+    const pieceSize = CELL_SIZE * 0.8;
+    
+    // Se tem skin customizada
+    if (skinImageUrl) {
+      switch (piece) {
+        case PIECE_TYPES.PLAYER1:
+          return (
+            <View style={[styles.pieceContainer, { width: pieceSize, height: pieceSize }]}>
+              <Image
+                source={{ uri: skinImageUrl }}
+                style={[styles.skinImage, styles.player1Skin]}
+                resizeMode="cover"
+              />
+            </View>
+          );
+        case PIECE_TYPES.PLAYER1_KING:
+          return (
+            <View style={[styles.pieceContainer, { width: pieceSize, height: pieceSize }]}>
+              <Image
+                source={{ uri: skinImageUrl }}
+                style={[styles.skinImage, styles.player1Skin]}
+                resizeMode="cover"
+              />
+              <View style={styles.kingCrown}>
+                <Text style={styles.kingText}>♔</Text>
+              </View>
+            </View>
+          );
+        case PIECE_TYPES.PLAYER2:
+          return (
+            <View style={[styles.pieceContainer, { width: pieceSize, height: pieceSize }]}>
+              <Image
+                source={{ uri: skinImageUrl }}
+                style={[styles.skinImage, styles.player2Skin]}
+                resizeMode="cover"
+              />
+            </View>
+          );
+        case PIECE_TYPES.PLAYER2_KING:
+          return (
+            <View style={[styles.pieceContainer, { width: pieceSize, height: pieceSize }]}>
+              <Image
+                source={{ uri: skinImageUrl }}
+                style={[styles.skinImage, styles.player2Skin]}
+                resizeMode="cover"
+              />
+              <View style={styles.kingCrown}>
+                <Text style={styles.kingText}>♔</Text>
+              </View>
+            </View>
+          );
+      }
+    } else {
+      // Fallback para peças coloridas padrão
+      switch (piece) {
+        case PIECE_TYPES.PLAYER1:
+          return <View style={[styles.defaultPiece, styles.player1Piece, { width: pieceSize, height: pieceSize }]} />;
+        case PIECE_TYPES.PLAYER1_KING:
+          return (
+            <View style={[styles.defaultPiece, styles.player1Piece, { width: pieceSize, height: pieceSize }]}>
+              <Text style={styles.kingText}>♔</Text>
+            </View>
+          );
+        case PIECE_TYPES.PLAYER2:
+          return <View style={[styles.defaultPiece, styles.player2Piece, { width: pieceSize, height: pieceSize }]} />;
+        case PIECE_TYPES.PLAYER2_KING:
+          return (
+            <View style={[styles.defaultPiece, styles.player2Piece, { width: pieceSize, height: pieceSize }]}>
+              <Text style={styles.kingText}>♔</Text>
+            </View>
+          );
+      }
     }
+    
+    return null;
   };
 
   // Verificar se célula é movimento possível
@@ -269,13 +328,21 @@ export default function JogarScreen() {
         try {
           const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
           if (userDoc.exists()) {
-            setUserProfile(userDoc.data());
+            const profileData = userDoc.data();
+            setUserProfile(profileData);
+            
+            // Carregar URL da skin
+            if (profileData.selectedSkinUrl) {
+              setSkinImageUrl(profileData.selectedSkinUrl);
+              console.log("🎨 Skin carregada:", profileData.selectedSkinName);
+            }
           }
         } catch (error) {
           console.error("Erro ao carregar perfil:", error);
         }
       } else {
         setUserProfile(null);
+        setSkinImageUrl(null);
       }
       
       setLoading(false);
@@ -342,6 +409,11 @@ export default function JogarScreen() {
         <Text style={styles.playerText}>
           Jogando: {userProfile?.username || user?.email?.split('@')[0]}
         </Text>
+        {userProfile?.selectedSkinName && (
+          <Text style={styles.skinText}>
+            🎨 Skin: {userProfile.selectedSkinName}
+          </Text>
+        )}
         <Text style={styles.currentPlayerText}>
           Vez do: {currentPlayer === 1 ? 'Jogador 1 (Esquerda)' : 'Jogador 2 (Direita)'}
         </Text>
@@ -350,11 +422,31 @@ export default function JogarScreen() {
       {/* Legendas */}
       <View style={styles.legend}>
         <View style={styles.legendItem}>
-          <View style={styles.player1Piece} />
+          {skinImageUrl ? (
+            <View style={styles.legendPieceContainer}>
+              <Image
+                source={{ uri: skinImageUrl }}
+                style={[styles.legendSkinImage, styles.player1Icon]}
+                resizeMode="cover"
+              />
+            </View>
+          ) : (
+            <View style={[styles.defaultPiece, styles.player1Piece, styles.legendPiece]} />
+          )}
           <Text style={styles.legendText}>Jogador 1</Text>
         </View>
         <View style={styles.legendItem}>
-          <View style={styles.player2Piece} />
+          {skinImageUrl ? (
+            <View style={styles.legendPieceContainer}>
+              <Image
+                source={{ uri: skinImageUrl }}
+                style={[styles.legendSkinImage, styles.player2Icon]}
+                resizeMode="cover"
+              />
+            </View>
+          ) : (
+            <View style={[styles.defaultPiece, styles.player2Piece, styles.legendPiece]} />
+          )}
           <Text style={styles.legendText}>Jogador 2</Text>
         </View>
       </View>
@@ -405,7 +497,6 @@ export default function JogarScreen() {
   );
 }
 
-// Styles permanecem os mesmos...
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -503,6 +594,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 5,
   },
+  skinText: {
+    color: '#FF9800',
+    fontSize: 12,
+    textAlign: 'center',
+    marginBottom: 5,
+  },
   currentPlayerText: {
     color: '#FFA726',
     fontSize: 14,
@@ -524,6 +621,23 @@ const styles = StyleSheet.create({
     color: '#fff',
     marginLeft: 8,
     fontSize: 12,
+  },
+  legendPieceContainer: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#333',
+  },
+  legendSkinImage: {
+    width: '100%',
+    height: '100%',
+  },
+  legendPiece: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
   },
   board: {
     width: BOARD_SIZE,
@@ -554,31 +668,68 @@ const styles = StyleSheet.create({
   possibleMoveCell: {
     backgroundColor: '#90EE90',
   },
-  player1Piece: {
-    width: CELL_SIZE * 0.7,
-    height: CELL_SIZE * 0.7,
-    borderRadius: CELL_SIZE * 0.35,
-    backgroundColor: '#FF4444',
+  
+  // Estilos das peças com skin
+  pieceContainer: {
+    borderRadius: 50,
+    overflow: 'hidden',
     borderWidth: 2,
-    borderColor: '#AA0000',
-    justifyContent: 'center',
-    alignItems: 'center',
+    borderColor: '#333',
+    position: 'absolute',
   },
-  player2Piece: {
-    width: CELL_SIZE * 0.7,
-    height: CELL_SIZE * 0.7,
-    borderRadius: CELL_SIZE * 0.35,
-    backgroundColor: '#4444FF',
-    borderWidth: 2,
-    borderColor: '#0000AA',
+  skinImage: {
+    width: '180%',
+    height: '200%',
+  },
+  player1Skin: {
+    // Mostra a metade esquerda da imagem
+    transform: [{ scaleX: 2 }, { translateX: '18%' }, { translateY: '-25%'}],
+  },
+  player2Skin: {
+    // Mostra a metade direita da imagem
+    transform: [{ scaleX: 2 }, { translateX: '-38%' }, { translateY: '-25%'}],
+  },
+  player1Icon: {
+    // Ícone para legenda - metade esquerda
+    transform: [{ scaleX: 2 }, { translateX: '25%' }],
+  },
+  player2Icon: {
+    // Ícone para legenda - metade direita
+    transform: [{ scaleX: 2 }, { translateX: '-25%' }],
+  },
+  kingCrown: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    backgroundColor: '#FFD700',
+    borderRadius: 8,
+    width: 16,
+    height: 16,
     justifyContent: 'center',
     alignItems: 'center',
   },
   kingText: {
     color: '#FFD700',
-    fontSize: 16,
+    fontSize: 10,
     fontWeight: 'bold',
   },
+  
+  // Peças padrão (fallback)
+  defaultPiece: {
+    borderRadius: 50,
+    borderWidth: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  player1Piece: {
+    backgroundColor: '#FF4444',
+    borderColor: '#AA0000',
+  },
+  player2Piece: {
+    backgroundColor: '#4444FF',
+    borderColor: '#0000AA',
+  },
+  
   possibleMoveIndicator: {
     position: 'absolute',
     width: 10,
