@@ -12,6 +12,7 @@ export default function RootLayout() {
       <Stack.Screen name="login" options={{ headerShown: false }} />
       <Stack.Screen name="skins" options={{ headerShown: false }} />
       <Stack.Screen name="jogar" options={{ headerShown: false }} />
+      <Stack.Screen name="perfil" options={{ headerShown: false }} />
     </Stack>
   );
 }

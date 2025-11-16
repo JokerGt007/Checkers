@@ -15,12 +15,12 @@ import {
 import { auth, db } from "../services/firebase";
 
 // Mapear as imagens locais baseado no ID do documento
-const localSkins = {
-  skin1: require("../../assets/parts/SKINS/coringa.png"),
-  skin2: require("../../assets/parts/SKINS/fnaf.png"),
-  skin3: require("../../assets/parts/SKINS/gundam.png"),
-  skin4: require("../../assets/parts/SKINS/jesus.png"),
-};
+// const localSkins = {
+//   skin1: require("../../assets/parts/SKINS/coringa.png"),
+//   skin2: require("../../assets/parts/SKINS/fnaf.png"),
+//   skin3: require("../../assets/parts/SKINS/gundam.png"),
+//   skin4: require("../../assets/parts/SKINS/jesus.png"),
+// };
 
 export default function SkinsMenu() {
   const [selectedSkin, setSelectedSkin] = useState(null);

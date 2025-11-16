@@ -172,7 +172,7 @@ export default function DamiumMenu() {
                 style={styles.profileButton}
                 onPress={() => {
                   setShowUserModal(false);
-                  // Aqui futuramente vai abrir tela de perfil
+                  router.push('/perfil'); // MUDANÇA AQUI
                 }}
               >
                 <Text style={styles.profileButtonText}>👤 Perfil</Text>
