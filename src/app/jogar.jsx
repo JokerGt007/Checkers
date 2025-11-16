@@ -20,9 +20,9 @@ const CELL_SIZE = BOARD_SIZE / 8;
 // Tipos de peças
 const PIECE_TYPES = {
   EMPTY: 0,
-  PLAYER1: 1,      // Jogador 1 (esquerda)
+  PLAYER1: 1,      // Jogador 1 (parte de cima - move para baixo)
   PLAYER1_KING: 2, // Dama do jogador 1
-  PLAYER2: 3,      // Jogador 2 (direita) 
+  PLAYER2: 3,      // Jogador 2 (parte de baixo - move para cima) 
   PLAYER2_KING: 4  // Dama do jogador 2
 };
 
@@ -36,13 +36,13 @@ export default function JogarScreen() {
   const [possibleMoves, setPossibleMoves] = useState([]);
   const [gameOver, setGameOver] = useState(false);
   const [winner, setWinner] = useState(null);
-  const [skinImageUrl, setSkinImageUrl] = useState(null); // Nova state para a skin
+  const [skinImageUrl, setSkinImageUrl] = useState(null);
 
-  // Inicializar tabuleiro - MOVIDO PARA CIMA
+  // Inicializar tabuleiro - CORRIGIDO
   const initializeBoard = () => {
     const newBoard = Array(8).fill(null).map(() => Array(8).fill(PIECE_TYPES.EMPTY));
     
-    // Colocar peças do jogador 1 (parte superior)
+    // Colocar peças do jogador 1 (linhas 0, 1, 2 - PARTE SUPERIOR)
     for (let row = 0; row < 3; row++) {
       for (let col = 0; col < 8; col++) {
         if ((row + col) % 2 === 1) {
@@ -51,7 +51,7 @@ export default function JogarScreen() {
       }
     }
     
-    // Colocar peças do jogador 2 (parte inferior)
+    // Colocar peças do jogador 2 (linhas 5, 6, 7 - PARTE INFERIOR)
     for (let row = 5; row < 8; row++) {
       for (let col = 0; col < 8; col++) {
         if ((row + col) % 2 === 1) {
@@ -61,14 +61,14 @@ export default function JogarScreen() {
     }
     
     setBoard(newBoard);
-    setCurrentPlayer(1);
+    setCurrentPlayer(1); // Jogador 1 (peças de cima) sempre começam
     setSelectedPiece(null);
     setPossibleMoves([]);
     setGameOver(false);
     setWinner(null);
   };
 
-  // Verificar se movimento é válido
+  // Verificar se movimento é válido - CORRIGIDO
   const isValidMove = (fromRow, fromCol, toRow, toCol) => {
     if (toRow < 0 || toRow >= 8 || toCol < 0 || toCol >= 8) return false;
     if (board[toRow][toCol] !== PIECE_TYPES.EMPTY) return false;
@@ -77,87 +77,202 @@ export default function JogarScreen() {
     const rowDiff = toRow - fromRow;
     const colDiff = Math.abs(toCol - fromCol);
     
-    // Movimento diagonal
+    // Movimento diagonal obrigatório
     if (colDiff !== Math.abs(rowDiff)) return false;
     
     // Verificar direção baseada no tipo da peça
     if (piece === PIECE_TYPES.PLAYER1) {
-      return rowDiff > 0; // Só pode mover para baixo
+      // Jogador 1: peças de cima, só movem PARA BAIXO (rowDiff > 0)
+      return rowDiff > 0;
     } else if (piece === PIECE_TYPES.PLAYER2) {
-      return rowDiff < 0; // Só pode mover para cima
+      // Jogador 2: peças de baixo, só movem PARA CIMA (rowDiff < 0) 
+      return rowDiff < 0;
     } else if (piece === PIECE_TYPES.PLAYER1_KING || piece === PIECE_TYPES.PLAYER2_KING) {
-      return true; // Dama pode mover em qualquer direção
+      // Damas podem mover em qualquer direção
+      return true;
     }
     
     return false;
   };
 
-  // Verificar se há captura
-  const canCapture = (fromRow, fromCol, toRow, toCol) => {
-    if (Math.abs(toRow - fromRow) !== 2) return false;
-    
-    const middleRow = (fromRow + toRow) / 2;
-    const middleCol = (fromCol + toCol) / 2;
-    const middlePiece = board[middleRow][middleCol];
-    const currentPiece = board[fromRow][fromCol];
-    
-    // Verificar se há peça inimiga no meio
-    if (currentPiece === PIECE_TYPES.PLAYER1 || currentPiece === PIECE_TYPES.PLAYER1_KING) {
-      return middlePiece === PIECE_TYPES.PLAYER2 || middlePiece === PIECE_TYPES.PLAYER2_KING;
-    } else {
-      return middlePiece === PIECE_TYPES.PLAYER1 || middlePiece === PIECE_TYPES.PLAYER1_KING;
-    }
-  };
-
-  // Calcular movimentos possíveis
+  // Calcular movimentos possíveis - MELHORADO PARA DAMAS
   const calculatePossibleMoves = (row, col) => {
     const moves = [];
-    const directions = [[-1, -1], [-1, 1], [1, -1], [1, 1]];
+    const piece = board[row][col];
+    
+    // Direções possíveis baseadas no tipo da peça
+    let directions = [];
+    
+    if (piece === PIECE_TYPES.PLAYER1) {
+      // Jogador 1 só move para baixo
+      directions = [[1, -1], [1, 1]];
+    } else if (piece === PIECE_TYPES.PLAYER2) {
+      // Jogador 2 só move para cima
+      directions = [[-1, -1], [-1, 1]];
+    } else if (piece === PIECE_TYPES.PLAYER1_KING || piece === PIECE_TYPES.PLAYER2_KING) {
+      // Damas movem em todas as direções
+      directions = [[-1, -1], [-1, 1], [1, -1], [1, 1]];
+    }
     
     for (const [dRow, dCol] of directions) {
-      // Movimento simples
-      const newRow = row + dRow;
-      const newCol = col + dCol;
-      
-      if (isValidMove(row, col, newRow, newCol)) {
-        moves.push([newRow, newCol]);
-      }
-      
-      // Captura
-      const captureRow = row + dRow * 2;
-      const captureCol = col + dCol * 2;
-      
-      if (canCapture(row, col, captureRow, captureCol) && 
-          isValidMove(row, col, captureRow, captureCol)) {
-        moves.push([captureRow, captureCol]);
+      if (piece === PIECE_TYPES.PLAYER1_KING || piece === PIECE_TYPES.PLAYER2_KING) {
+        // LÓGICA ESPECIAL PARA DAMAS - podem mover múltiplas casas
+        calculateQueenMoves(row, col, dRow, dCol, moves);
+      } else {
+        // LÓGICA NORMAL PARA PEÇAS SIMPLES
+        // Movimento simples (1 casa)
+        const newRow = row + dRow;
+        const newCol = col + dCol;
+        
+        if (newRow >= 0 && newRow < 8 && newCol >= 0 && newCol < 8 && 
+            board[newRow][newCol] === PIECE_TYPES.EMPTY) {
+          moves.push([newRow, newCol]);
+        }
+        
+        // Captura (2 casas)
+        const captureRow = row + dRow * 2;
+        const captureCol = col + dCol * 2;
+        
+        if (captureRow >= 0 && captureRow < 8 && captureCol >= 0 && captureCol < 8 && 
+            board[captureRow][captureCol] === PIECE_TYPES.EMPTY &&
+            canCapture(row, col, captureRow, captureCol)) {
+          moves.push([captureRow, captureCol]);
+        }
       }
     }
     
     return moves;
   };
 
-  // Verificar vencedor
-  const checkWinner = (currentBoard) => {
-    const player1Pieces = currentBoard.flat().filter(cell => 
-      cell === PIECE_TYPES.PLAYER1 || cell === PIECE_TYPES.PLAYER1_KING
-    ).length;
+  // NOVA FUNÇÃO: Calcular movimentos da dama
+  const calculateQueenMoves = (startRow, startCol, dRow, dCol, moves) => {
+    const piece = board[startRow][startCol];
+    let currentRow = startRow;
+    let currentCol = startCol;
+    let foundEnemy = false;
+    let enemyRow = -1;
+    let enemyCol = -1;
     
-    const player2Pieces = currentBoard.flat().filter(cell => 
-      cell === PIECE_TYPES.PLAYER2 || cell === PIECE_TYPES.PLAYER2_KING
-    ).length;
-    
-    if (player1Pieces === 0) {
-      setWinner(2);
-      setGameOver(true);
-      Alert.alert("🎉 Fim de Jogo!", "Jogador 2 (Direita) venceu!");
-    } else if (player2Pieces === 0) {
-      setWinner(1);
-      setGameOver(true);
-      Alert.alert("🎉 Fim de Jogo!", "Jogador 1 (Esquerda) venceu!");
+    // Percorrer a diagonal até encontrar obstáculo ou borda
+    for (let step = 1; step < 8; step++) {
+      const newRow = startRow + dRow * step;
+      const newCol = startCol + dCol * step;
+      
+      // Verificar se está dentro do tabuleiro
+      if (newRow < 0 || newRow >= 8 || newCol < 0 || newCol >= 8) {
+        break;
+      }
+      
+      const cellPiece = board[newRow][newCol];
+      
+      if (cellPiece === PIECE_TYPES.EMPTY) {
+        if (!foundEnemy) {
+          // Movimento normal - casa vazia sem inimigo no caminho
+          moves.push([newRow, newCol]);
+        } else {
+          // Casa vazia após inimigo - movimento de captura válido
+          moves.push([newRow, newCol]);
+        }
+      } else {
+        // Há uma peça nesta casa
+        const isEnemyPiece = (
+          (piece === PIECE_TYPES.PLAYER1_KING && 
+           (cellPiece === PIECE_TYPES.PLAYER2 || cellPiece === PIECE_TYPES.PLAYER2_KING)) ||
+          (piece === PIECE_TYPES.PLAYER2_KING && 
+           (cellPiece === PIECE_TYPES.PLAYER1 || cellPiece === PIECE_TYPES.PLAYER1_KING))
+        );
+        
+        if (isEnemyPiece && !foundEnemy) {
+          // Primeira peça inimiga encontrada
+          foundEnemy = true;
+          enemyRow = newRow;
+          enemyCol = newCol;
+        } else {
+          // Segunda peça encontrada ou peça aliada - parar
+          break;
+        }
+      }
     }
   };
 
-  // Mover peça
+  // Verificar se há captura - MELHORADO PARA DAMAS
+  const canCapture = (fromRow, fromCol, toRow, toCol) => {
+    const piece = board[fromRow][fromCol];
+    
+    // Para damas, usar lógica especial
+    if (piece === PIECE_TYPES.PLAYER1_KING || piece === PIECE_TYPES.PLAYER2_KING) {
+      return canQueenCapture(fromRow, fromCol, toRow, toCol);
+    }
+    
+    // Para peças normais, lógica original
+    const rowDiff = toRow - fromRow;
+    const colDiff = toCol - fromCol;
+    
+    // Deve ser movimento de 2 casas na diagonal
+    if (Math.abs(rowDiff) !== 2 || Math.abs(colDiff) !== 2) return false;
+    
+    const middleRow = fromRow + rowDiff / 2;
+    const middleCol = fromCol + colDiff / 2;
+    const middlePiece = board[middleRow][middleCol];
+    
+    // Não pode capturar se casa do meio estiver vazia
+    if (middlePiece === PIECE_TYPES.EMPTY) return false;
+    
+    // Verificar se há peça inimiga no meio
+    if (piece === PIECE_TYPES.PLAYER1) {
+      return middlePiece === PIECE_TYPES.PLAYER2 || middlePiece === PIECE_TYPES.PLAYER2_KING;
+    } else {
+      return middlePiece === PIECE_TYPES.PLAYER1 || middlePiece === PIECE_TYPES.PLAYER1_KING;
+    }
+  };
+
+  // NOVA FUNÇÃO: Verificar captura da dama
+  const canQueenCapture = (fromRow, fromCol, toRow, toCol) => {
+    const piece = board[fromRow][fromCol];
+    const rowDiff = toRow - fromRow;
+    const colDiff = toCol - fromCol;
+    
+    // Deve ser movimento diagonal
+    if (Math.abs(rowDiff) !== Math.abs(colDiff)) return false;
+    
+    const dRow = rowDiff > 0 ? 1 : -1;
+    const dCol = colDiff > 0 ? 1 : -1;
+    const steps = Math.abs(rowDiff);
+    
+    let enemyCount = 0;
+    let lastEnemyRow = -1;
+    let lastEnemyCol = -1;
+    
+    // Verificar cada casa no caminho
+    for (let step = 1; step < steps; step++) {
+      const checkRow = fromRow + dRow * step;
+      const checkCol = fromCol + dCol * step;
+      const checkPiece = board[checkRow][checkCol];
+      
+      if (checkPiece !== PIECE_TYPES.EMPTY) {
+        const isEnemyPiece = (
+          (piece === PIECE_TYPES.PLAYER1_KING && 
+           (checkPiece === PIECE_TYPES.PLAYER2 || checkPiece === PIECE_TYPES.PLAYER2_KING)) ||
+          (piece === PIECE_TYPES.PLAYER2_KING && 
+           (checkPiece === PIECE_TYPES.PLAYER1 || checkPiece === PIECE_TYPES.PLAYER1_KING))
+        );
+        
+        if (isEnemyPiece) {
+          enemyCount++;
+          lastEnemyRow = checkRow;
+          lastEnemyCol = checkCol;
+        } else {
+          // Peça aliada no caminho - não pode capturar
+          return false;
+        }
+      }
+    }
+    
+    // Só pode capturar se houver exatamente 1 inimigo no caminho
+    return enemyCount === 1;
+  };
+
+  // Mover peça - MELHORADO PARA DAMAS
   const movePiece = (fromRow, fromCol, toRow, toCol) => {
     const newBoard = board.map(row => [...row]);
     const piece = newBoard[fromRow][fromCol];
@@ -167,17 +282,51 @@ export default function JogarScreen() {
     newBoard[fromRow][fromCol] = PIECE_TYPES.EMPTY;
     
     // Verificar captura
-    if (Math.abs(toRow - fromRow) === 2) {
-      const middleRow = (fromRow + toRow) / 2;
-      const middleCol = (fromCol + toCol) / 2;
+    const rowDiff = toRow - fromRow;
+    const colDiff = toCol - fromCol;
+    
+    if (piece === PIECE_TYPES.PLAYER1_KING || piece === PIECE_TYPES.PLAYER2_KING) {
+      // CAPTURA DE DAMA - remover todas as peças inimigas no caminho
+      const dRow = rowDiff > 0 ? 1 : -1;
+      const dCol = colDiff > 0 ? 1 : -1;
+      const steps = Math.abs(rowDiff);
+      
+      for (let step = 1; step < steps; step++) {
+        const checkRow = fromRow + dRow * step;
+        const checkCol = fromCol + dCol * step;
+        const checkPiece = newBoard[checkRow][checkCol];
+        
+        if (checkPiece !== PIECE_TYPES.EMPTY) {
+          const isEnemyPiece = (
+            (piece === PIECE_TYPES.PLAYER1_KING && 
+             (checkPiece === PIECE_TYPES.PLAYER2 || checkPiece === PIECE_TYPES.PLAYER2_KING)) ||
+            (piece === PIECE_TYPES.PLAYER2_KING && 
+             (checkPiece === PIECE_TYPES.PLAYER1 || checkPiece === PIECE_TYPES.PLAYER1_KING))
+          );
+          
+          if (isEnemyPiece) {
+            newBoard[checkRow][checkCol] = PIECE_TYPES.EMPTY;
+            console.log(`👑💥 Dama capturou peça em [${checkRow}, ${checkCol}]`);
+          }
+        }
+      }
+    } else if (Math.abs(rowDiff) === 2 && Math.abs(colDiff) === 2) {
+      // CAPTURA NORMAL - uma peça apenas
+      const middleRow = fromRow + rowDiff / 2;
+      const middleCol = fromCol + colDiff / 2;
       newBoard[middleRow][middleCol] = PIECE_TYPES.EMPTY;
+      console.log(`💥 Captura! Peça removida em [${middleRow}, ${middleCol}]`);
     }
     
     // Promover para dama
     if (piece === PIECE_TYPES.PLAYER1 && toRow === 7) {
+      // Jogador 1 chegou na última linha (linha 7)
       newBoard[toRow][toCol] = PIECE_TYPES.PLAYER1_KING;
+      console.log("👑 Jogador 1 promovido a dama!");
     } else if (piece === PIECE_TYPES.PLAYER2 && toRow === 0) {
+      // Jogador 2 chegou na primeira linha (linha 0)
       newBoard[toRow][toCol] = PIECE_TYPES.PLAYER2_KING;
+      console.log("👑 Jogador 2 promovido a dama!");
     }
     
     setBoard(newBoard);
@@ -192,11 +341,38 @@ export default function JogarScreen() {
     checkWinner(newBoard);
   };
 
+  // Verificar vencedor
+  const checkWinner = (currentBoard) => {
+    const player1Pieces = currentBoard.flat().filter(cell => 
+      cell === PIECE_TYPES.PLAYER1 || cell === PIECE_TYPES.PLAYER1_KING
+    ).length;
+    
+    const player2Pieces = currentBoard.flat().filter(cell => 
+      cell === PIECE_TYPES.PLAYER2 || cell === PIECE_TYPES.PLAYER2_KING
+    ).length;
+    
+    console.log(`🔍 Contagem de peças: Jogador 1: ${player1Pieces}, Jogador 2: ${player2Pieces}`);
+    
+    if (player1Pieces === 0) {
+      setWinner(2);
+      setGameOver(true);
+      Alert.alert("🎉 Fim de Jogo!", "Jogador 2 (Azul/Baixo) venceu!");
+      console.log("🏆 Jogador 2 venceu!");
+    } else if (player2Pieces === 0) {
+      setWinner(1);
+      setGameOver(true);
+      Alert.alert("🎉 Fim de Jogo!", "Jogador 1 (Vermelho/Cima) venceu!");
+      console.log("🏆 Jogador 1 venceu!");
+    }
+  };
+
   // Lidar com clique na célula
   const handleCellPress = (row, col) => {
     if (gameOver) return;
     
     const piece = board[row][col];
+    
+    console.log(`🔍 Clique em [${row}, ${col}] - Peça: ${piece} - Jogador atual: ${currentPlayer}`);
     
     // Se não há peça selecionada
     if (!selectedPiece) {
@@ -204,7 +380,11 @@ export default function JogarScreen() {
       if ((currentPlayer === 1 && (piece === PIECE_TYPES.PLAYER1 || piece === PIECE_TYPES.PLAYER1_KING)) ||
           (currentPlayer === 2 && (piece === PIECE_TYPES.PLAYER2 || piece === PIECE_TYPES.PLAYER2_KING))) {
         setSelectedPiece([row, col]);
-        setPossibleMoves(calculatePossibleMoves(row, col));
+        const moves = calculatePossibleMoves(row, col);
+        setPossibleMoves(moves);
+        console.log(`✅ Peça selecionada [${row}, ${col}] - Movimentos possíveis:`, moves);
+      } else {
+        console.log(`❌ Peça inválida para jogador ${currentPlayer}`);
       }
     } else {
       // Há peça selecionada
@@ -214,21 +394,27 @@ export default function JogarScreen() {
         // Desselecionar
         setSelectedPiece(null);
         setPossibleMoves([]);
+        console.log("🔄 Peça desselecionada");
       } else if (possibleMoves.some(([r, c]) => r === row && c === col)) {
         // Mover peça
+        console.log(`🚀 Movendo de [${selectedRow}, ${selectedCol}] para [${row}, ${col}]`);
         movePiece(selectedRow, selectedCol, row, col);
       } else {
-        // Selecionar nova peça
+        // Selecionar nova peça (se for do jogador atual)
         if ((currentPlayer === 1 && (piece === PIECE_TYPES.PLAYER1 || piece === PIECE_TYPES.PLAYER1_KING)) ||
             (currentPlayer === 2 && (piece === PIECE_TYPES.PLAYER2 || piece === PIECE_TYPES.PLAYER2_KING))) {
           setSelectedPiece([row, col]);
-          setPossibleMoves(calculatePossibleMoves(row, col));
+          const moves = calculatePossibleMoves(row, col);
+          setPossibleMoves(moves);
+          console.log(`🔄 Nova peça selecionada [${row}, ${col}] - Movimentos:`, moves);
+        } else {
+          console.log(`❌ Movimento inválido para [${row}, ${col}]`);
         }
       }
     }
   };
 
-  // Renderizar peça com skin - NOVA FUNÇÃO
+  // Renderizar peça com skin
   const renderPiece = (piece) => {
     if (piece === PIECE_TYPES.EMPTY) return null;
 
@@ -415,7 +601,7 @@ export default function JogarScreen() {
           </Text>
         )}
         <Text style={styles.currentPlayerText}>
-          Vez do: {currentPlayer === 1 ? 'Jogador 1 (Esquerda)' : 'Jogador 2 (Direita)'}
+          Vez do: {currentPlayer === 1 ? 'Jogador 1 (Vermelho/Cima)' : 'Jogador 2 (Azul/Baixo)'}
         </Text>
       </View>
 
@@ -433,7 +619,7 @@ export default function JogarScreen() {
           ) : (
             <View style={[styles.defaultPiece, styles.player1Piece, styles.legendPiece]} />
           )}
-          <Text style={styles.legendText}>Jogador 1</Text>
+          <Text style={styles.legendText}>Jogador 1 (Cima)</Text>
         </View>
         <View style={styles.legendItem}>
           {skinImageUrl ? (
@@ -447,7 +633,7 @@ export default function JogarScreen() {
           ) : (
             <View style={[styles.defaultPiece, styles.player2Piece, styles.legendPiece]} />
           )}
-          <Text style={styles.legendText}>Jogador 2</Text>
+          <Text style={styles.legendText}>Jogador 2 (Baixo)</Text>
         </View>
       </View>
 
@@ -497,6 +683,7 @@ export default function JogarScreen() {
   );
 }
 
+// Os estilos permanecem iguais...
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -675,7 +862,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderWidth: 2,
     borderColor: '#333',
-    position: 'absolute',
+    position: 'relative',
   },
   skinImage: {
     width: '180%',
@@ -709,7 +896,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   kingText: {
-    color: '#FFD700',
+    color: '#B8860B',
     fontSize: 10,
     fontWeight: 'bold',
   },
