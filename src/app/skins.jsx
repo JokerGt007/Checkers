@@ -1,6 +1,6 @@
 import { router } from "expo-router";
 import { onAuthStateChanged } from "firebase/auth";
-import { collection, doc, getDoc, getDocs, updateDoc } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, orderBy, query, updateDoc } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -14,13 +14,47 @@ import {
 } from "react-native";
 import { auth, db } from "../services/firebase";
 
-// Mapear as imagens locais baseado no ID do documento
-// const localSkins = {
-//   skin1: require("../../assets/parts/SKINS/coringa.png"),
-//   skin2: require("../../assets/parts/SKINS/fnaf.png"),
-//   skin3: require("../../assets/parts/SKINS/gundam.png"),
-//   skin4: require("../../assets/parts/SKINS/jesus.png"),
-// };
+// Componente separado para gerenciar loading das imagens
+const SkinImage = ({ imageUrl, skinId }) => {
+  const [imageLoading, setImageLoading] = useState(true);
+  const [imageError, setImageError] = useState(false);
+
+  return (
+    <View style={styles.imageContainer}>
+      <Image 
+        source={{ uri: imageUrl }}
+        style={styles.skinImage}
+        onLoadStart={() => {
+          setImageLoading(true);
+          setImageError(false);
+        }}
+        onLoad={() => {
+          console.log(`✅ Imagem da skin ${skinId} carregada`);
+          setImageLoading(false);
+        }}
+        onError={(error) => {
+          console.warn(`⚠️ Erro ao carregar imagem da skin ${skinId}:`, error);
+          setImageLoading(false);
+          setImageError(true);
+        }}
+      />
+      
+      {/* Mostrar spinner APENAS enquanto carrega */}
+      {imageLoading && (
+        <View style={styles.imageLoadingOverlay}>
+          <ActivityIndicator size="small" color="#4CAF50" />
+        </View>
+      )}
+      
+      {/* Mostrar ícone de erro se falhar */}
+      {imageError && (
+        <View style={styles.imageErrorOverlay}>
+          <Text style={styles.errorIcon}>❌</Text>
+        </View>
+      )}
+    </View>
+  );
+};
 
 export default function SkinsMenu() {
   const [selectedSkin, setSelectedSkin] = useState(null);
@@ -28,7 +62,7 @@ export default function SkinsMenu() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [user, setUser] = useState(null);
-  const [userProfile, setUserProfile] = useState(null); // Adicionar
+  const [userProfile, setUserProfile] = useState(null);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -43,7 +77,22 @@ export default function SkinsMenu() {
         try {
           const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
           if (userDoc.exists()) {
-            setUserProfile(userDoc.data());
+            const userData = userDoc.data();
+            setUserProfile(userData);
+            
+            // Definir a skin atualmente selecionada do usuário
+            if (userData.selectedSkin) {
+              // Encontrar a skin correspondente na lista quando ela for carregada
+              loadSkins().then(() => {
+                setSkins(prevSkins => {
+                  const userSkin = prevSkins.find(skin => skin.id === userData.selectedSkin);
+                  if (userSkin) {
+                    setSelectedSkin(userSkin);
+                  }
+                  return prevSkins;
+                });
+              });
+            }
           }
         } catch (error) {
           console.error("Erro ao carregar perfil:", error);
@@ -61,11 +110,16 @@ export default function SkinsMenu() {
       setLoading(true);
       setError(null);
       
+      console.log("🔄 Carregando skins do Firebase...");
+      
+      // Criar query ordenada para buscar as skins em ordem (skin1, skin2, etc.)
       const skinsCollection = collection(db, 'skins');
-      const skinsSnapshot = await getDocs(skinsCollection);
+      const skinsQuery = query(skinsCollection, orderBy('__name__')); // Ordena pelo ID do documento
+      const skinsSnapshot = await getDocs(skinsQuery);
       
       if (skinsSnapshot.empty) {
-        setError("Collection 'skins' está vazia");
+        setError("Collection 'skins' está vazia ou não existe");
+        console.log("❌ Collection 'skins' vazia");
         return;
       }
       
@@ -73,23 +127,34 @@ export default function SkinsMenu() {
       
       skinsSnapshot.forEach((doc) => {
         const skinData = doc.data();
+        console.log(`📦 Skin encontrada: ${doc.id}`, skinData);
+        
+        // Validar se tem os campos necessários
+        if (!skinData.nome || !skinData.url) {
+          console.warn(`⚠️ Skin ${doc.id} incompleta:`, skinData);
+        }
         
         skinsList.push({
           id: doc.id,
-          nome: skinData.nome || "Nome não encontrado",
+          nome: skinData.nome || `Skin ${doc.id}`,
           url: skinData.url || "",
-          imageSource: localSkins[doc.id] || localSkins.skin1
+          description: skinData.description || "",
+          // Fallback para uma imagem padrão se a URL estiver vazia
+          imageUrl: skinData.url || "https://via.placeholder.com/150x150?text=No+Image"
         });
       });
       
+      console.log(`✅ ${skinsList.length} skins carregadas:`, skinsList);
       setSkins(skinsList);
       
-      if (skinsList.length > 0) {
+      // Se não há skin selecionada ainda, selecionar a primeira
+      if (skinsList.length > 0 && !selectedSkin) {
         setSelectedSkin(skinsList[0]);
       }
       
     } catch (error) {
-      setError(`${error.code}: ${error.message}`);
+      console.error("❌ Erro ao carregar skins:", error);
+      setError(`${error.code || 'unknown'}: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -102,6 +167,7 @@ export default function SkinsMenu() {
     }
 
     setSaving(true);
+    console.log(`💾 Salvando skin: ${selectedSkin.nome} (${selectedSkin.id})`);
 
     try {
       if (user) {
@@ -112,6 +178,8 @@ export default function SkinsMenu() {
           selectedSkinUrl: selectedSkin.url,
           lastUpdated: new Date()
         });
+        
+        console.log("✅ Skin salva no perfil do usuário");
         
         Alert.alert(
           "✅ Sucesso!", 
@@ -130,7 +198,7 @@ export default function SkinsMenu() {
         );
       }
     } catch (error) {
-      console.error("Erro ao salvar skin:", error);
+      console.error("❌ Erro ao salvar skin:", error);
       Alert.alert("Erro", "Não foi possível salvar sua escolha: " + error.message);
     } finally {
       setSaving(false);
@@ -152,24 +220,31 @@ export default function SkinsMenu() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Escolha sua Skin</Text>
+      <Text style={styles.title}>🎨 Escolha sua Skin</Text>
       
       {/* Status do usuário */}
       <View style={styles.userStatus}>
         {user ? (
           <Text style={styles.loggedInText}>
-            🟢 Logado como: {userProfile?.username || user.displayName || user.email?.split('@')[0]}
+            🟢 Logado: {userProfile?.username || user.displayName || user.email?.split('@')[0]}
           </Text>
         ) : (
           <Text style={styles.loggedOutText}>
             🔴 Não logado - Alterações não serão salvas
           </Text>
         )}
+        
+        {/* Mostrar skin atual do usuário */}
+        {userProfile?.selectedSkinName && (
+          <Text style={styles.currentSkinText}>
+            🎯 Atual: {userProfile.selectedSkinName}
+          </Text>
+        )}
       </View>
       
       {error && (
         <View style={styles.errorContainer}>
-          <Text style={styles.errorTitle}>Erro de Conexão</Text>
+          <Text style={styles.errorTitle}>❌ Erro de Conexão</Text>
           <Text style={styles.errorText}>{error}</Text>
           <TouchableOpacity style={styles.retryButton} onPress={loadSkins}>
             <Text style={styles.retryText}>🔄 Tentar Novamente</Text>
@@ -179,7 +254,10 @@ export default function SkinsMenu() {
       
       {skins.length === 0 && !error ? (
         <View style={styles.noSkinsContainer}>
-          <Text style={styles.noSkinsText}>Nenhuma skin encontrada</Text>
+          <Text style={styles.noSkinsText}>📭 Nenhuma skin encontrada</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={loadSkins}>
+            <Text style={styles.retryText}>🔄 Recarregar</Text>
+          </TouchableOpacity>
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.skinsContainer}>
@@ -190,20 +268,35 @@ export default function SkinsMenu() {
                 styles.skinItem,
                 selectedSkin?.id === skin.id && styles.selectedSkinItem
               ]}
-              onPress={() => setSelectedSkin(skin)}
+              onPress={() => {
+                setSelectedSkin(skin);
+                console.log(`🎯 Skin selecionada: ${skin.nome}`);
+              }}
             >
-              <Image 
-                source={skin.imageSource} 
-                style={styles.skinImage}
-              />
-              <Text style={[
-                styles.skinName,
-                selectedSkin?.id === skin.id && styles.selectedSkinName
-              ]}>
-                {skin.nome}
-              </Text>
+              {/* MUDANÇA AQUI: Usar o componente SkinImage */}
+              <SkinImage imageUrl={skin.imageUrl} skinId={skin.id} />
+              
+              <View style={styles.skinInfo}>
+                <Text style={[
+                  styles.skinName,
+                  selectedSkin?.id === skin.id && styles.selectedSkinName
+                ]}>
+                  {skin.nome}
+                </Text>
+                
+                {/* Mostrar ID da skin para debug */}
+                <Text style={styles.skinId}>ID: {skin.id}</Text>
+                
+                {/* Mostrar descrição se disponível */}
+                {skin.description && (
+                  <Text style={styles.skinDescription}>
+                    {skin.description}
+                  </Text>
+                )}
+              </View>
+              
               {selectedSkin?.id === skin.id && (
-                <Text style={styles.selectedIndicator}>✓</Text>
+                <Text style={styles.selectedIndicator}>✅</Text>
               )}
             </TouchableOpacity>
           ))}
@@ -212,23 +305,35 @@ export default function SkinsMenu() {
 
       <View style={styles.buttonContainer}>
         <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-          <Text style={styles.buttonText}>Voltar</Text>
+          <Text style={styles.buttonText}>← Voltar</Text>
         </TouchableOpacity>
         
         <TouchableOpacity 
-          style={[styles.confirmButton, saving && styles.disabledBtn]} 
+          style={[
+            styles.confirmButton, 
+            (saving || !selectedSkin) && styles.disabledBtn
+          ]} 
           onPress={handleConfirm}
-          disabled={saving}
+          disabled={saving || !selectedSkin}
         >
           {saving ? (
             <ActivityIndicator color="white" size="small" />
           ) : (
             <Text style={styles.buttonText}>
-              {user ? 'Salvar' : 'Selecionar'}
+              {user ? '💾 Salvar' : '✅ Selecionar'}
             </Text>
           )}
         </TouchableOpacity>
       </View>
+      
+      {/* Informações de debug */}
+      {__DEV__ && (
+        <View style={styles.debugInfo}>
+          <Text style={styles.debugText}>
+            🐛 Debug: {skins.length} skins | Selecionada: {selectedSkin?.id || 'nenhuma'}
+          </Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -257,8 +362,8 @@ const styles = StyleSheet.create({
   },
   userStatus: {
     backgroundColor: "#2a2a2a",
-    padding: 12,
-    borderRadius: 8,
+    padding: 15,
+    borderRadius: 10,
     marginBottom: 20,
   },
   loggedInText: {
@@ -266,6 +371,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: "center",
     fontWeight: "bold",
+    marginBottom: 5,
   },
   loggedOutText: {
     color: "#FFA726",
@@ -273,10 +379,16 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontWeight: "bold",
   },
+  currentSkinText: {
+    color: "#2196F3",
+    fontSize: 12,
+    textAlign: "center",
+    fontStyle: "italic",
+  },
   errorContainer: {
     backgroundColor: "#ff4444",
     padding: 15,
-    borderRadius: 8,
+    borderRadius: 10,
     marginBottom: 20,
   },
   errorTitle: {
@@ -293,25 +405,28 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   retryButton: {
-    backgroundColor: "#ffffff20",
-    padding: 10,
-    borderRadius: 5,
+    backgroundColor: "#ffffff30",
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 5,
   },
   retryText: {
     color: "#fff",
     textAlign: "center",
     fontWeight: "bold",
+    fontSize: 14,
   },
   noSkinsContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    padding: 20,
   },
   noSkinsText: {
     color: "#fff",
     fontSize: 18,
     textAlign: "center",
-    marginBottom: 10,
+    marginBottom: 20,
   },
   skinsContainer: {
     flexGrow: 1,
@@ -323,7 +438,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#2a2a2a",
     padding: 15,
     marginVertical: 8,
-    borderRadius: 10,
+    borderRadius: 12,
     borderWidth: 2,
     borderColor: "transparent",
   },
@@ -331,24 +446,65 @@ const styles = StyleSheet.create({
     borderColor: "#4CAF50",
     backgroundColor: "#1a4a1a",
   },
-  skinImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 8,
+  imageContainer: {
+    position: "relative",
     marginRight: 15,
+  },
+  skinImage: {
+    width: 70,
+    height: 70,
+    borderRadius: 10,
+    backgroundColor: "#333",
+  },
+  imageLoadingOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(51, 51, 51, 0.8)",
+    borderRadius: 10,
+  },
+  imageErrorOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 68, 68, 0.3)",
+    borderRadius: 10,
+  },
+  errorIcon: {
+    fontSize: 20,
+  },
+  skinInfo: {
+    flex: 1,
   },
   skinName: {
     fontSize: 18,
     color: "#fff",
-    flex: 1,
+    fontWeight: "bold",
+    marginBottom: 4,
   },
   selectedSkinName: {
     color: "#4CAF50",
-    fontWeight: "bold",
+  },
+  skinId: {
+    fontSize: 12,
+    color: "#888",
+    marginBottom: 2,
+  },
+  skinDescription: {
+    fontSize: 14,
+    color: "#ccc",
+    fontStyle: "italic",
   },
   selectedIndicator: {
-    color: "#4CAF50",
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: "bold",
   },
   buttonContainer: {
@@ -359,24 +515,36 @@ const styles = StyleSheet.create({
   backButton: {
     backgroundColor: "#666",
     paddingVertical: 15,
-    paddingHorizontal: 30,
+    paddingHorizontal: 25,
     borderRadius: 25,
     flex: 0.45,
   },
   confirmButton: {
     backgroundColor: "#4CAF50",
     paddingVertical: 15,
-    paddingHorizontal: 30,
+    paddingHorizontal: 25,
     borderRadius: 25,
     flex: 0.45,
   },
   disabledBtn: {
     backgroundColor: "#666",
+    opacity: 0.6,
   },
   buttonText: {
     color: "#fff",
     fontSize: 16,
     fontWeight: "bold",
+    textAlign: "center",
+  },
+  debugInfo: {
+    backgroundColor: "#333",
+    padding: 10,
+    borderRadius: 5,
+    marginTop: 10,
+  },
+  debugText: {
+    color: "#888",
+    fontSize: 12,
     textAlign: "center",
   },
 });
