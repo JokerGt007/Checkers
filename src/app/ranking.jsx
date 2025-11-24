@@ -1,0 +1,190 @@
+import { useNavigation } from "@react-navigation/native";
+import { collection, getDocs } from "firebase/firestore";
+import { useEffect, useState } from "react";
+import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Icon } from "react-native-elements";
+import { db } from "../services/firebase";
+
+const RankingScreen = () => {
+  const [rankings, setRankings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const navigation = useNavigation();
+
+  useEffect(() => {
+    const fetchRankings = async () => {
+      try {
+        console.log("Buscando rankings...");
+
+        const playersSnap = await getDocs(collection(db, "rankings"));
+        let allMatches = [];
+
+        for (const playerDoc of playersSnap.docs) {
+          const matchesRef = collection(db, "rankings", playerDoc.id, "matches");
+          const matchesSnap = await getDocs(matchesRef);
+
+          matchesSnap.forEach(matchDoc => {
+            const data = matchDoc.data();
+
+            allMatches.push({
+              id: matchDoc.id,
+              playerId: playerDoc.id,
+              name: data.name,
+              level: Number(data.level),
+              score: Number(data.score),
+              timestamp: data.timestamp || "",
+            });
+          });
+        }
+
+        allMatches.sort((a, b) => b.score - a.score);
+
+        const ranked = allMatches.map((item, index) => ({
+          ...item,
+          rank: index + 1,
+        }));
+
+        setRankings(ranked);
+
+      } catch (err) {
+        console.error(err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRankings();
+  }, []);
+
+  const renderItem = ({ item }) => (
+    <View style={styles.item}>
+      <Text style={styles.rank}>{item.rank}</Text>
+
+      <Icon
+        name={item.rank === 1 ? "trophy" : item.rank === 2 ? "medal" : "star"}
+        type="font-awesome"
+        color={item.rank === 1 ? "gold" : item.rank === 2 ? "silver" : "bronze"}
+        size={20}
+      />
+
+      <View style={styles.playerInfo}>
+        <Text style={styles.name}>{item.name}</Text>
+        <Text style={styles.details}>
+          Vitórias: {item.score} | Nível: {item.level}
+        </Text>
+      </View>
+    </View>
+  );
+
+  if (loading)
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color="#4CAF50" />
+        <Text style={{ color: "#fff" }}>Carregando rankings...</Text>
+      </View>
+    );
+
+  if (error)
+    return (
+      <View style={styles.center}>
+        <Text style={styles.error}>{error}</Text>
+      </View>
+    );
+
+  return (
+    <View style={styles.container}>
+
+      {/* BOTÃO VOLTAR IGUAL AO DE SKINS */}
+      <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+        <Text style={styles.backButtonText}>Voltar</Text>
+      </TouchableOpacity>
+
+      <Text style={styles.title}>Ranking Global</Text>
+
+      <FlatList
+        data={rankings}
+        keyExtractor={(item) => item.id}
+        renderItem={renderItem}
+        showsVerticalScrollIndicator={false}
+      />
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#1a1a1a",
+    padding: 20,
+  },
+
+  // Botão igual o da tela Skins
+  backButton: {
+    backgroundColor: "#2a2a2a",
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: "#4CAF50",
+    alignSelf: "flex-start",
+    marginBottom: 20,
+  },
+
+  backButtonText: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+
+  title: {
+    fontSize: 28,
+    fontWeight: "bold",
+    color: "#fff",
+    textAlign: "center",
+    marginBottom: 20,
+  },
+  item: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#2a2a2a",
+    padding: 15,
+    marginVertical: 8,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: "#333",
+  },
+  rank: {
+    fontSize: 22,
+    color: "#4CAF50",
+    fontWeight: "bold",
+    width: 40,
+    textAlign: "center",
+  },
+  playerInfo: {
+    flex: 1,
+    marginLeft: 10,
+  },
+  name: {
+    fontSize: 18,
+    color: "#fff",
+    fontWeight: "bold",
+  },
+  details: {
+    fontSize: 14,
+    color: "#ccc",
+    marginTop: 4,
+  },
+  center: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  error: {
+    color: "#ff4444",
+    fontSize: 16,
+  },
+});
+
+export default RankingScreen;
