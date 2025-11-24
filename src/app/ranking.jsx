@@ -1,8 +1,8 @@
+import { FontAwesome5 } from "@expo/vector-icons"; // Ícones nativos do Expo
 import { useNavigation } from "@react-navigation/native";
 import { collection, getDocs } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { Icon } from "react-native-elements";
 import { db } from "../services/firebase";
 
 const RankingScreen = () => {
@@ -24,7 +24,7 @@ const RankingScreen = () => {
           const matchesRef = collection(db, "rankings", playerDoc.id, "matches");
           const matchesSnap = await getDocs(matchesRef);
 
-          matchesSnap.forEach(matchDoc => {
+          matchesSnap.forEach((matchDoc) => {
             const data = matchDoc.data();
 
             allMatches.push({
@@ -38,6 +38,7 @@ const RankingScreen = () => {
           });
         }
 
+        // Ordenar pelo score (vitórias)
         allMatches.sort((a, b) => b.score - a.score);
 
         const ranked = allMatches.map((item, index) => ({
@@ -46,7 +47,6 @@ const RankingScreen = () => {
         }));
 
         setRankings(ranked);
-
       } catch (err) {
         console.error(err);
         setError(err.message);
@@ -62,11 +62,11 @@ const RankingScreen = () => {
     <View style={styles.item}>
       <Text style={styles.rank}>{item.rank}</Text>
 
-      <Icon
+      <FontAwesome5
         name={item.rank === 1 ? "trophy" : item.rank === 2 ? "medal" : "star"}
-        type="font-awesome"
-        color={item.rank === 1 ? "gold" : item.rank === 2 ? "silver" : "bronze"}
         size={20}
+        color={item.rank === 1 ? "gold" : item.rank === 2 ? "silver" : "bronze"}
+        style={{ marginRight: 10 }}
       />
 
       <View style={styles.playerInfo}>
@@ -95,8 +95,7 @@ const RankingScreen = () => {
 
   return (
     <View style={styles.container}>
-
-      {/* BOTÃO VOLTAR IGUAL AO DE SKINS */}
+      {/* Botão voltar */}
       <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
         <Text style={styles.backButtonText}>Voltar</Text>
       </TouchableOpacity>
@@ -120,7 +119,6 @@ const styles = StyleSheet.create({
     padding: 20,
   },
 
-  // Botão igual o da tela Skins
   backButton: {
     backgroundColor: "#2a2a2a",
     paddingVertical: 10,
@@ -145,6 +143,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginBottom: 20,
   },
+
   item: {
     flexDirection: "row",
     alignItems: "center",
@@ -155,6 +154,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: "#333",
   },
+
   rank: {
     fontSize: 22,
     color: "#4CAF50",
@@ -162,25 +162,30 @@ const styles = StyleSheet.create({
     width: 40,
     textAlign: "center",
   },
+
   playerInfo: {
     flex: 1,
     marginLeft: 10,
   },
+
   name: {
     fontSize: 18,
     color: "#fff",
     fontWeight: "bold",
   },
+
   details: {
     fontSize: 14,
     color: "#ccc",
     marginTop: 4,
   },
+
   center: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
   },
+
   error: {
     color: "#ff4444",
     fontSize: 16,
