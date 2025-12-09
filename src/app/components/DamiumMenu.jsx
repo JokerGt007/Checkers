@@ -16,7 +16,7 @@ const menuItems = [
   { label: 'SKINS', href: '/skins' },
   { label: 'RANKING', href: '/ranking' },
   { label: 'CONFIG.', href: '/configuracoes' },
-  { label: 'CRÉDITOS', href: '/creditos' },
+  { label: 'CRÉDITOS', href: '/credits' },
 ];
 
 export default function DamiumMenu() {
