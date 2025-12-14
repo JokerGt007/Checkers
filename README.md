@@ -176,7 +176,7 @@ npx expo build:ios
 
 ### Funcionalidades Colaborativas
 - **Sistema de Skins**: Design (Gustavo) + Lógica (Gianlucca) + Integração (Gianlucca)
-- **Tabuleiro Interativo**: Lógica do jogo (Gianlucca) + Estilização (Gustavo)
+- **Tabuleiro Interativo**: Lógica do jogo (Gianlucca) + Estilização (Gianlucca)
 - **Autenticação**: Backend (João Paulo) + Frontend (Gianlucca) + UI (Elias)
 
 ## Tecnologias Utilizadas
