@@ -158,8 +158,6 @@ npx expo build:ios
 - 🎬 **Tela de créditos** com animações
 
 #### **Elias Daniel Dias**
-- 🎨 **Design visual** do menu principal
-- 🎨 **Estilização geral** da aplicação
 - 🌟 **Paleta de cores** e identidade visual
 - 📱 **Layout responsivo** para diferentes telas
 - 🎯 **Ícones e elementos visuais**
@@ -177,8 +175,8 @@ npx expo build:ios
 - 🔄 **Sincronização** de informações
 
 ### Funcionalidades Colaborativas
-- **Sistema de Skins**: Design (Elias) + Lógica (Gianlucca) + Integração (Gustavo)
-- **Tabuleiro Interativo**: Lógica do jogo (Gianlucca) + Estilização (Elias)
+- **Sistema de Skins**: Design (Gustavo) + Lógica (Gianlucca) + Integração (Gianlucca)
+- **Tabuleiro Interativo**: Lógica do jogo (Gianlucca) + Estilização (Gustavo)
 - **Autenticação**: Backend (João Paulo) + Frontend (Gianlucca) + UI (Elias)
 
 ## Tecnologias Utilizadas
