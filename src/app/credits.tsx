@@ -1,20 +1,26 @@
+import { Audio } from 'expo-av';
+import { router } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
+import {
+  Animated,
+  BackHandler,
+  Dimensions,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
+} from "react-native";
 
 export type CreditItem = { type: "title" | "role" | "name" | "blank"; text?: string };
 
-type CreditsProps = {
-  credits?: CreditItem[]; // lista de créditos (padrão interna)
-  speed?: number; // pixels por segundo
-  className?: string; // para customizar o container
-  onFinish?: () => void; // callback quando terminar
-  musicSrc?: string | null; // caminho/URL opcional da música de fundo
-  showSkip?: boolean; // mostra botão pular
-  initialPause?: boolean; // começa pausado
-};
+const { height } = Dimensions.get('window');
 
-// Componente exportado como default — pronto para usar em .tsx
-export default function Credits({
-  credits = [
+export default function Credits() {
+  const scrollY = useRef(new Animated.Value(height)).current;
+  const [running, setRunning] = useState(true);
+  const [sound, setSound] = useState<Audio.Sound | null>(null);
+
+  const credits: CreditItem[] = [
     { type: "title", text: "CRÉDITOS FINAIS" },
     { type: "blank" },
     { type: "role", text: "Direção de Projeto" },
@@ -47,251 +53,277 @@ export default function Credits({
     { type: "name", text: "[A toda equipe envolvida]" },
     { type: "blank" },
     { type: "role", text: "Ferramentas e Tecnologias" },
-    { type: "name", text: "React • TypeScript • Firebase • Git • VS Code" },
+    { type: "name", text: "React Native • TypeScript • Firebase • Git • VS Code" },
     { type: "blank" },
     { type: "role", text: "Versão" },
-    { type: "name", text: "v1.0 — 24/11/2025" },
+    { type: "name", text: "v1.0 — 14/12/2024" },
     { type: "blank" },
     { type: "title", text: "Obrigado por jogar!" },
     { type: "blank" },
-  ],
-  speed = 40,
-  className = "",
-  onFinish,
-  musicSrc = null,
-  showSkip = true,
-  initialPause = false,
-}: CreditsProps) {
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const contentRef = useRef<HTMLDivElement | null>(null);
-  const rafRef = useRef<number | null>(null);
-  const lastTimeRef = useRef<number | null>(null);
-  const [offset, setOffset] = useState<number>(0);
-  const [running, setRunning] = useState<boolean>(!initialPause);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  ];
 
-  // calcula a altura total do conteúdo após o primeiro render
+  // Voltar ao menu
+  const goToMenu = async () => {
+    console.log("🏠 Voltando ao menu...");
+    
+    if (sound) {
+      try {
+        await sound.stopAsync();
+        await sound.unloadAsync();
+      } catch (error) {
+        console.warn("Erro ao parar música:", error);
+      }
+    }
+    
+    router.push('/');
+  };
+
+  // Carregar e tocar música
   useEffect(() => {
-    const cont = containerRef.current;
-    const content = contentRef.current;
-    if (!cont || !content) return;
+    const loadMusic = async () => {
+      try {
+        console.log("🎵 Carregando música...");
+        
+        // Configurar áudio
+        await Audio.setAudioModeAsync({
+          staysActiveInBackground: false,
+          shouldDuckAndroid: false,
+          playThroughEarpieceAndroid: false,
+          allowsRecordingIOS: false,
+          playsInSilentModeIOS: true,
+        });
 
-    // start offset: começo logo abaixo da viewport
-    setOffset(cont.clientHeight);
+        // Carregar arquivo de música
+        const { sound: newSound } = await Audio.Sound.createAsync(
+          require('../../assets/videoplayback.mp3'), // SEU ARQUIVO AQUI
+          {
+            shouldPlay: true,  // Tocar automaticamente
+            isLooping: true,   // Loop infinito
+            volume: 0.5,       // Volume 50%
+          }
+        );
+
+        setSound(newSound);
+        console.log("✅ Música carregada e tocando!");
+
+      } catch (error) {
+        console.error("❌ Erro ao carregar música:", error);
+      }
+    };
+
+    loadMusic();
+
+    return () => {
+      if (sound) {
+        sound.unloadAsync().catch(console.warn);
+      }
+    };
   }, []);
 
-  // animação com requestAnimationFrame para rolagem suave
+  // Animação dos créditos
   useEffect(() => {
-    const tick = (time: number) => {
-      if (lastTimeRef.current == null) lastTimeRef.current = time;
-      const dt = (time - lastTimeRef.current) / 1000; // segundos
-      lastTimeRef.current = time;
+    if (!running) return;
 
-      if (running && contentRef.current && containerRef.current) {
-        setOffset((prev) => prev - speed * dt);
-      }
+    const totalHeight = credits.length * 60; // 60px por linha
+    const duration = (totalHeight + height) * 50; // 50ms por pixel
 
-      rafRef.current = requestAnimationFrame(tick);
-    };
+    console.log("🎬 Iniciando créditos...");
 
-    rafRef.current = requestAnimationFrame(tick);
+    const animation = Animated.timing(scrollY, {
+      toValue: -totalHeight,
+      duration: duration,
+      useNativeDriver: true,
+    });
+
+    animation.start(() => {
+      console.log("🎬 Créditos terminaram");
+      goToMenu();
+    });
 
     return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
+      animation.stop();
     };
-  }, [running, speed]);
-
-  // detecta quando terminou: quando o offset tiver passado todo o conteúdo
-  useEffect(() => {
-    const content = contentRef.current;
-    const cont = containerRef.current;
-    if (!content || !cont) return;
-
-    const contentHeight = content.scrollHeight;
-    if (offset < -contentHeight) {
-      // acabamento
-      setRunning(false);
-      if (onFinish) onFinish();
-    }
-  }, [offset, onFinish]);
-
-  // tecla ESC para pular
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" || e.key === "Enter") {
-        if (onFinish) onFinish();
-      }
-      if (e.key === " ") {
-        setRunning((r) => !r); // espaço pausa / play
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onFinish]);
-
-  // áudio (opcional)
-  useEffect(() => {
-    if (!musicSrc) return;
-    const audio = new Audio(musicSrc);
-    audio.loop = true;
-    audio.volume = 0.6;
-    audioRef.current = audio;
-    const tryPlay = async () => {
-      try {
-        await audio.play();
-      } catch (e) {
-        // autoplay pode falhar em alguns navegadores; ficará pronto para ser acionado
-      }
-    };
-    if (running) tryPlay();
-
-    return () => {
-      audio.pause();
-      audioRef.current = null;
-    };
-  }, [musicSrc, running]);
-
-  // ao pausar, pausar música; ao continuar, tocar
-  useEffect(() => {
-    const a = audioRef.current;
-    if (!a) return;
-    if (running) a.play().catch(() => {});
-    else a.pause();
   }, [running]);
 
-  // estilos inline simples — você pode substituir por Tailwind ou CSS
-  const containerStyle: React.CSSProperties = {
-    position: "relative",
-    overflow: "hidden",
-    width: "100%",
-    height: "100%",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    background: "linear-gradient(180deg, #050509, #0b0b10)",
+  // Botão voltar do Android
+  useEffect(() => {
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+      goToMenu();
+      return true;
+    });
+
+    return () => backHandler.remove();
+  }, []);
+
+  // Pausar/Continuar
+  const togglePause = async () => {
+    if (!sound) return;
+
+    try {
+      const status = await sound.getStatusAsync();
+      
+      if (running) {
+        // Pausar
+        await sound.pauseAsync();
+        setRunning(false);
+        console.log("⏸️ Pausado");
+      } else {
+        // Continuar
+        await sound.playAsync();
+        setRunning(true);
+        console.log("▶️ Continuando");
+      }
+    } catch (error) {
+      console.warn("Erro ao pausar/continuar:", error);
+    }
   };
 
-  const contentStyle: React.CSSProperties = {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    transform: `translateY(${offset}px)`,
-    willChange: "transform",
-    textAlign: "center",
-    padding: "40px 20px",
-    boxSizing: "border-box",
-  };
+  // Renderizar item
+  const renderItem = (item: CreditItem, index: number) => {
+    if (item.type === "blank") {
+      return <View key={index} style={styles.blank} />;
+    }
 
-  const titleStyle: React.CSSProperties = {
-    fontSize: "2.25rem",
-    fontWeight: 800,
-    color: "#fff",
-    margin: "12px 0",
-  };
+    let style = styles.nameText;
+    // if (item.type === "title") style = styles.titleText;
+    // if (item.type === "role") style = styles.roleText;
 
-  const roleStyle: React.CSSProperties = {
-    fontSize: "1.25rem",
-    fontWeight: 700,
-    color: "#e6e6e6",
-    margin: "8px 0",
-  };
-
-  const nameStyle: React.CSSProperties = {
-    fontSize: "1rem",
-    fontWeight: 500,
-    color: "#cfcfcf",
-    margin: "6px 0",
-  };
-
-  const blankStyle: React.CSSProperties = { height: 18 };
-
-  // overlay de fade (top & bottom) para aspecto cinematográfico
-  const fadeStyleTop: React.CSSProperties = {
-    pointerEvents: "none",
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    height: "18%",
-    background: "linear-gradient(to bottom, rgba(11,11,16,1), rgba(11,11,16,0))",
-  };
-  const fadeStyleBottom: React.CSSProperties = {
-    pointerEvents: "none",
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: "18%",
-    background: "linear-gradient(to top, rgba(11,11,16,1), rgba(11,11,16,0))",
+    return (
+      <Text key={index} style={style}>
+        {item.text}
+      </Text>
+    );
   };
 
   return (
-    <div ref={containerRef} className={`credits-roll ${className}`} style={containerStyle}>
-      <div ref={contentRef} style={contentStyle}>
-        {credits.map((c, i) => {
-          if (c.type === "title") return (
-            <div key={i} style={titleStyle}>{c.text}</div>
-          );
-          if (c.type === "role") return (
-            <div key={i} style={roleStyle}>{c.text}</div>
-          );
-          if (c.type === "name") return (
-            <div key={i} style={nameStyle}>{c.text}</div>
-          );
-          return <div key={i} style={blankStyle} />;
-        })}
-      </div>
+    <View style={styles.container}>
+      {/* Créditos animados */}
+      <Animated.View
+        style={[
+          styles.creditsContainer,
+          { transform: [{ translateY: scrollY }] }
+        ]}
+      >
+        {credits.map((item, index) => renderItem(item, index))}
+      </Animated.View>
 
-      {/* fade overlays */}
-      <div style={fadeStyleTop} />
-      <div style={fadeStyleBottom} />
+      {/* Fade superior */}
+      <View style={styles.fadeTop} />
 
-      {/* controles simples */}
-      <div style={{ position: "absolute", top: 16, right: 16, display: "flex", gap: 8 }}>
-        {showSkip && (
-          <button
-            onClick={() => { if (onFinish) onFinish(); }}
-            style={{ padding: "8px 12px", borderRadius: 8, border: "none", cursor: "pointer" }}
-          >
-            Pular
-          </button>
-        )}
+      {/* Fade inferior */}
+      <View style={styles.fadeBottom} />
 
-        <button
-          onClick={() => setRunning((r) => !r)}
-          style={{ padding: "8px 12px", borderRadius: 8, border: "none", cursor: "pointer" }}
-        >
-          {running ? "Pausar" : "Continuar"}
-        </button>
-      </div>
+      {/* Botões de controle */}
+      <View style={styles.controls}>
+        <TouchableOpacity style={styles.menuButton} onPress={goToMenu}>
+          <Text style={styles.buttonText}>🏠 Menu</Text>
+        </TouchableOpacity>
 
-      {/* instrução rodapé */}
-      <div style={{ position: "absolute", bottom: 14, width: "100%", textAlign: "center", color: "#999", fontSize: 12 }}>
-        Pressione ESC ou ENTER para voltar • Espaço para pausar/retomar
-      </div>
-    </div>
+        <TouchableOpacity style={styles.pauseButton} onPress={togglePause}>
+          <Text style={styles.buttonText}>
+            {running ? "⏸️ Pausar" : "▶️ Play"}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Status */}
+      <View style={styles.status}>
+        <Text style={styles.statusText}>
+          🎵 {sound ? "Música carregada" : "Carregando música..."}
+        </Text>
+      </View>
+    </View>
   );
 }
 
-/*
-  Como usar:
-
-  import Credits, { CreditItem } from "./Credits";
-
-  const credits: CreditItem[] = [ ... ];
-
-  <div style={{ width: 1024, height: 600 }}>
-    <Credits
-      credits={credits}
-      speed={48}
-      musicSrc={"/assets/music/credits.mp3"}
-      onFinish={() => router.push("/")}
-    />
-  </div>
-
-  Observações:
-  - Este componente foi escrito para React + TypeScript (.tsx).
-  - Você pode trocar os estilos por classes Tailwind (se estiver usando Tailwind) ou por CSS modular.
-  - Para carregar créditos dinamicamente, passe a prop `credits` (por exemplo, carregada de um JSON).
-*/
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#050509',
+    overflow: 'hidden',
+  },
+  creditsContainer: {
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 50,
+  },
+  titleText: {
+    fontSize: 32,
+    fontWeight: '800',
+    color: '#ffffff',
+    textAlign: 'center',
+    marginVertical: 20,
+  },
+  roleText: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#e6e6e6',
+    textAlign: 'center',
+    marginVertical: 15,
+  },
+  nameText: {
+    fontSize: 18,
+    fontWeight: '500',
+    color: '#cfcfcf',
+    textAlign: 'center',
+    marginVertical: 8,
+  },
+  blank: {
+    height: 30,
+  },
+  fadeTop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 120,
+    backgroundColor: 'rgba(5,5,9,0.9)',
+    zIndex: 1,
+  },
+  fadeBottom: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 120,
+    backgroundColor: 'rgba(5,5,9,0.9)',
+    zIndex: 1,
+  },
+  controls: {
+    position: 'absolute',
+    top: 50,
+    right: 20,
+    flexDirection: 'row',
+    zIndex: 2,
+    gap: 10,
+  },
+  menuButton: {
+    backgroundColor: '#ff4444',
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderRadius: 8,
+  },
+  pauseButton: {
+    backgroundColor: '#4CAF50',
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderRadius: 8,
+  },
+  buttonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
+  status: {
+    position: 'absolute',
+    bottom: 30,
+    left: 0,
+    right: 0,
+    zIndex: 1,
+  },
+  statusText: {
+    color: '#999',
+    fontSize: 12,
+    textAlign: 'center',
+  },
+});

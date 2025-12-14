@@ -15,7 +15,7 @@ const menuItems = [
   { label: 'JOGAR', href: '/jogar' },
   { label: 'SKINS', href: '/skins' },
   { label: 'RANKING', href: '/ranking' },
-  { label: 'CONFIG.', href: '/configuracoes' },
+  // { label: 'CONFIG.', href: '/configuracoes' },
   { label: 'CRÉDITOS', href: '/credits' },
 ];
 
