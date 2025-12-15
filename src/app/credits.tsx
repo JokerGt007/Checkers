@@ -56,7 +56,7 @@ export default function Credits() {
     { type: "name", text: "React Native • TypeScript • Firebase • Git • VS Code" },
     { type: "blank" },
     { type: "role", text: "Versão" },
-    { type: "name", text: "v1.0 — 14/12/2024" },
+    { type: "name", text: "v1.0 — 14/12/2025" },
     { type: "blank" },
     { type: "title", text: "Obrigado por jogar!" },
     { type: "blank" },
