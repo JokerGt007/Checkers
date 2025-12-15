@@ -72,6 +72,7 @@ export default function JogarScreen() {
     if (!user) return;
 
     const delta = winnerPlayer === 1 ? 3 : -3;
+    const matches = 1;
 
     const username =
       userProfile?.username ||
@@ -86,7 +87,7 @@ export default function JogarScreen() {
         uid: user.uid,
         username,
         points: increment(delta),
-        lastDelta: delta,
+        matches: increment(matches),
         updatedAt: serverTimestamp(),
       },
       { merge: true }

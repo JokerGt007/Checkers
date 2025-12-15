@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  StyleSheet,
   Text,
   TouchableOpacity,
   View
@@ -23,43 +24,26 @@ const RankingScreen = () => {
       try {
         const playersSnap = await getDocs(collection(db, "rankings"));
         const rankingArray = [];
-
-        for (const playerDoc of playersSnap.docs) {
-          const matchesRef = collection(db, "rankings", playerDoc.id, "matches");
-          const matchesSnap = await getDocs(matchesRef);
-
-          let totalScore = 0;
-          let totalMatches = 0;
-          let playerName = "";
-          let playerLevel = 1;
-
-          matchesSnap.forEach((matchDoc) => {
-            const data = matchDoc.data();
-
-            totalScore += Number(data.score || 0);
-            totalMatches += 1;
-            playerName = data.name;
-            playerLevel = data.level;
+  
+        playersSnap.forEach((doc) => {
+          const data = doc.data();
+  
+          rankingArray.push({
+            id: doc.id,
+            name: data.username || "Jogador",
+            score: Number(data.points || 0),
+            matches: data.matches || 0,
+            level: data.level || 1,
           });
-
-          if (totalMatches > 0) {
-            rankingArray.push({
-              id: playerDoc.id,
-              name: playerName,
-              level: playerLevel,
-              score: totalScore,
-              matches: totalMatches,
-            });
-          }
-        }
-
+        });
+  
         rankingArray.sort((a, b) => b.score - a.score);
-
+  
         const ranked = rankingArray.map((item, index) => ({
           ...item,
           rank: index + 1,
         }));
-
+  
         setRankings(ranked);
       } catch (err) {
         console.error(err);
@@ -68,7 +52,7 @@ const RankingScreen = () => {
         setLoading(false);
       }
     };
-
+  
     fetchRankings();
   }, []);
 
