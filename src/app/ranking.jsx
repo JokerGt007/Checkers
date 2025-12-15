@@ -1,8 +1,14 @@
-import { FontAwesome5 } from "@expo/vector-icons"; // Ícones nativos do Expo
+import { FontAwesome5 } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { collection, getDocs } from "firebase/firestore";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import {
+  ActivityIndicator,
+  FlatList,
+  Text,
+  TouchableOpacity,
+  View
+} from "react-native";
 import { db } from "../services/firebase";
 
 const RankingScreen = () => {
@@ -15,33 +21,41 @@ const RankingScreen = () => {
   useEffect(() => {
     const fetchRankings = async () => {
       try {
-        console.log("Buscando rankings...");
-
         const playersSnap = await getDocs(collection(db, "rankings"));
-        let allMatches = [];
+        const rankingArray = [];
 
         for (const playerDoc of playersSnap.docs) {
           const matchesRef = collection(db, "rankings", playerDoc.id, "matches");
           const matchesSnap = await getDocs(matchesRef);
 
+          let totalScore = 0;
+          let totalMatches = 0;
+          let playerName = "";
+          let playerLevel = 1;
+
           matchesSnap.forEach((matchDoc) => {
             const data = matchDoc.data();
 
-            allMatches.push({
-              id: matchDoc.id,
-              playerId: playerDoc.id,
-              name: data.name,
-              level: Number(data.level),
-              score: Number(data.score),
-              timestamp: data.timestamp || "",
-            });
+            totalScore += Number(data.score || 0);
+            totalMatches += 1;
+            playerName = data.name;
+            playerLevel = data.level;
           });
+
+          if (totalMatches > 0) {
+            rankingArray.push({
+              id: playerDoc.id,
+              name: playerName,
+              level: playerLevel,
+              score: totalScore,
+              matches: totalMatches,
+            });
+          }
         }
 
-        // Ordenar pelo score (vitórias)
-        allMatches.sort((a, b) => b.score - a.score);
+        rankingArray.sort((a, b) => b.score - a.score);
 
-        const ranked = allMatches.map((item, index) => ({
+        const ranked = rankingArray.map((item, index) => ({
           ...item,
           rank: index + 1,
         }));
@@ -49,7 +63,7 @@ const RankingScreen = () => {
         setRankings(ranked);
       } catch (err) {
         console.error(err);
-        setError(err.message);
+        setError("Erro ao carregar ranking");
       } finally {
         setLoading(false);
       }
@@ -72,7 +86,7 @@ const RankingScreen = () => {
       <View style={styles.playerInfo}>
         <Text style={styles.name}>{item.name}</Text>
         <Text style={styles.details}>
-          Vitórias: {item.score} | Nível: {item.level}
+          Pontos: {item.score} | Partidas: {item.matches} | Nível: {item.level}
         </Text>
       </View>
     </View>
@@ -82,7 +96,7 @@ const RankingScreen = () => {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color="#4CAF50" />
-        <Text style={{ color: "#fff" }}>Carregando rankings...</Text>
+        <Text style={{ color: "#fff" }}>Carregando ranking...</Text>
       </View>
     );
 
@@ -95,12 +109,11 @@ const RankingScreen = () => {
 
   return (
     <View style={styles.container}>
-      {/* Botão voltar */}
       <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
         <Text style={styles.backButtonText}>Voltar</Text>
       </TouchableOpacity>
 
-      <Text style={styles.title}>Ranking Global</Text>
+      <Text style={styles.title}>🏆 Ranking Global</Text>
 
       <FlatList
         data={rankings}
